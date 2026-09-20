@@ -128,8 +128,8 @@ muscles (meters, actuators, gateways), UrjaSetu is the brain that makes them
 
 ## Team
 
-Built end-to-end by **[Your Name]** — [Branch, College].
-*Digital twin, optimizer, anomaly detection, API, firmware, dashboard: one codebase, one builder. [Add teammates + roles if any]*
+Built end-to-end by **Aditya Mehra** — Electronics & Telecommunication Engineering, **Thakur College of Engineering & Technology**, Mumbai.
+*Digital twin, optimizer, anomaly detection, API, firmware, dashboard: one codebase, one builder.*
 
 ---
 
