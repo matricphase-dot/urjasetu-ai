@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UrjaSetu AI — Autonomous Building Energy Intelligence</title>
+<style>
+  :root{
+    --bg:#0B1220; --card:#111A2E; --card2:#0E1626; --line:#1E2A44;
+    --txt:#E8EEF7; --mut:#8CA0B8; --green:#3DCD58; --red:#FF5C5C;
+    --amber:#FFB020; --blue:#4DA3FF; --purple:#B07CFF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 600px at 80% -10%, #14243f 0%, var(--bg) 55%);
+       color:var(--txt); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans",sans-serif;
+       min-height:100vh; padding:18px 22px 30px}
+  .wrap{max-width:1340px;margin:0 auto}
+  /* ---------- header ---------- */
+  header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+  .logo{width:46px;height:46px;border-radius:12px;flex:0 0 auto;
+        background:linear-gradient(135deg,#3DCD58,#1E8F4E);display:flex;align-items:center;justify-content:center;
+        box-shadow:0 4px 18px rgba(61,205,88,.35)}
+  .ttl h1{font-size:21px;letter-spacing:.3px}
+  .ttl p{font-size:12px;color:var(--mut);margin-top:2px}
+  .pills{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+  .pill{background:var(--card);border:1px solid var(--line);border-radius:999px;
+        padding:6px 13px;font-size:12px;color:var(--mut);display:flex;align-items:center;gap:7px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  .dot.off{background:var(--red);box-shadow:0 0 8px var(--red)}
+  .pill b{color:var(--txt);font-weight:600}
+  /* ---------- kpi cards ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:14px}
+  @media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 15px;position:relative;overflow:hidden}
+  .kpi .lb{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.7px}
+  .kpi .vl{font-size:25px;font-weight:700;margin-top:5px;font-variant-numeric:tabular-nums}
+  .kpi .sub{font-size:11.5px;margin-top:3px;color:var(--mut)}
+  .kpi .sub.good{color:var(--green)} .kpi .sub.bad{color:var(--red)} .kpi .sub.warn{color:var(--amber)}
+  .kpi.hl{background:linear-gradient(160deg,#12321f,#111A2E 70%);border-color:#245c38}
+  /* ---------- layout ---------- */
+  .grid{display:grid;grid-template-columns:1fr 350px;gap:14px}
+  @media(max-width:1100px){.grid{grid-template-columns:1fr}}
+  .col{display:flex;flex-direction:column;gap:14px;min-width:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px}
+  .card h3{font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .card h3 .tag{margin-left:auto;font-size:10.5px;background:var(--card2);border:1px solid var(--line);
+      padding:3px 9px;border-radius:999px;color:var(--mut);text-transform:none;letter-spacing:0}
+  canvas{display:block;width:100%}
+  /* ---------- controls ---------- */
+  .ctrls{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+  button{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:9px;
+         padding:8px 14px;font-size:13px;cursor:pointer;transition:.15s;font-weight:500}
+  button:hover{border-color:#3a4d78;background:#16223b}
+  button.primary{background:linear-gradient(135deg,#2fae4b,#1E8F4E);border-color:#2fae4b;font-weight:600}
+  button.danger{background:#3a1620;border-color:#7c2b3a;color:#ffb4b4}
+  button.spd.on{border-color:var(--green);color:var(--green);background:#12291c}
+  .switch{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--line);
+          border-radius:9px;padding:7px 13px;cursor:pointer;user-select:none}
+  .switch .track{width:40px;height:21px;border-radius:999px;background:#39435c;position:relative;transition:.2s}
+  .switch .track::after{content:'';position:absolute;width:15px;height:15px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.2s}
+  .switch.on .track{background:var(--green)}
+  .switch.on .track::after{left:22px}
+  .switch span{font-size:13px;font-weight:600}
+  .hint{font-size:11.5px;color:var(--mut);margin-top:9px;line-height:1.5}
+  /* ---------- zones ---------- */
+  .zones{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  @media(max-width:900px){.zones{grid-template-columns:repeat(2,1fr)}}
+  .zone{background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:10px 12px;position:relative}
+  .zone .zn{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .zone .zf{font-size:10.5px;color:var(--mut);margin-top:1px}
+  .zone .zt{font-size:21px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums}
+  .zone .zt small{font-size:11px;color:var(--mut);font-weight:400}
+  .zone .zo{font-size:11px;color:var(--mut);margin-top:2px}
+  .chip{position:absolute;top:9px;right:9px;font-size:9.5px;font-weight:700;letter-spacing:.4px;
+        padding:3px 8px;border-radius:6px;background:#22304f;color:var(--mut)}
+  .chip.COOL{background:#123524;color:#5fe08a}
+  .chip.PRE-COOL{background:#122c47;color:#7dbcff}
+  .chip.SETBACK{background:#3a2c10;color:#ffc75e}
+  .chip.OFF{background:#1b2334;color:#66748c}
+  .chip.FAULT{background:#47131d;color:#ff8080;animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.45}}
+  .zone.faulty{border-color:#7c2b3a;box-shadow:0 0 14px rgba(255,92,92,.18)}
+  /* ---------- feed ---------- */
+  .feed{max-height:420px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding-right:4px}
+  .fev{display:flex;gap:9px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:8px 11px;
+       font-size:12.3px;line-height:1.45;animation:slidein .3s ease}
+  @keyframes slidein{from{opacity:0;transform:translateY(-5px)}to{opacity:1}}
+  .fev .t{flex:0 0 44px;color:var(--mut);font-variant-numeric:tabular-nums;font-size:11px;padding-top:1px}
+  .fev.alert{border-color:#7c2b3a;background:#251019}
+  .fev.money{border-color:#245c38;background:#0f2118}
+  .fev b{color:var(--green)}
+  .fev.alert b{color:#ff8080}
+  /* ---------- battery ---------- */
+  .bar{height:15px;background:#1a2338;border-radius:8px;overflow:hidden;margin:9px 0 5px;position:relative}
+  .bar .fill{height:100%;background:linear-gradient(90deg,#1E8F4E,#3DCD58);border-radius:8px;transition:width .3s}
+  .row{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px dashed #1c2740}
+  .row:last-child{border-bottom:none}
+  .row span:first-child{color:var(--mut)}
+  .row b{font-variant-numeric:tabular-nums}
+  .g{color:var(--green)} .r{color:var(--red)} .a{color:var(--amber)} .b{color:var(--blue)}
+  /* ---------- impact table ---------- */
+  table{width:100%;border-collapse:collapse;font-size:12.8px}
+  th{color:var(--mut);font-weight:600;text-align:right;padding:6px 4px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--line)}
+  th:first-child,td:first-child{text-align:left}
+  td{padding:7px 4px;text-align:right;border-bottom:1px dashed #1c2740;font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:none}
+  td.g{color:var(--green);font-weight:700}
+  .disc{font-size:11px;color:var(--mut);line-height:1.6;margin-top:14px;text-align:center;max-width:980px;margin-left:auto;margin-right:auto}
+  details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 16px;margin-top:14px}
+  summary{cursor:pointer;font-size:13.5px;font-weight:600;color:var(--txt)}
+  details p{font-size:12.5px;color:var(--mut);line-height:1.65;margin:10px 0}
+  .tt{position:absolute;pointer-events:none;background:#0a1120f0;border:1px solid #2a3a5f;border-radius:9px;
+      padding:8px 11px;font-size:11.5px;line-height:1.7;display:none;z-index:5;white-space:nowrap;
+      box-shadow:0 6px 20px rgba(0,0,0,.5);font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+        <path d="M13 2 4.5 13.5H11L9.8 22l8.7-11.5H12L13 2Z" fill="#07130b"/>
+      </svg>
+    </div>
+    <div class="ttl">
+      <h1>UrjaSetu AI</h1>
+      <p>Autonomous Building Energy Intelligence &nbsp;·&nbsp; Yuva Yodha 2026 — Smart Buildings Track</p>
+    </div>
+    <div class="pills">
+      <div class="pill"><span class="dot" id="aiDot"></span> AI BRAIN: <b id="aiState">ON</b></div>
+      <div class="pill">🕒 <b id="clock">06:00</b></div>
+      <div class="pill">TARIFF <b id="tariffPill">₹8.0/kWh</b></div>
+    </div>
+  </header>
+
+  <section class="kpis">
+    <div class="kpi">
+      <div class="lb">Grid draw · now</div>
+      <div class="vl" id="kGrid">— kW</div>
+      <div class="sub good" id="kGridDelta">vs baseline —</div>
+    </div>
+    <div class="kpi hl">
+      <div class="lb">Savings today</div>
+      <div class="vl g" id="kSave">₹0</div>
+      <div class="sub" id="kSavePct">0% cheaper than baseline</div>
+    </div>
+    <div class="kpi">
+      <div class="lb">Solar generation</div>
+      <div class="vl" id="kSolar">— kW</div>
+      <div class="sub" id="kSolarSub">130 kWp rooftop + canopy</div>
+    </div>
+    <div class="kpi">
+      <div class="lb">Battery</div>
+      <div class="vl" id="kSoc">—%</div>
+      <div class="sub" id="kBattState">idle</div>
+    </div>
+    <div class="kpi">
+      <div class="lb">CO₂ avoided</div>
+      <div class="vl g" id="kCo2">0 kg</div>
+      <div class="sub">grid factor 0.71 kg/kWh</div>
+    </div>
+    <div class="kpi">
+      <div class="lb">Comfort score</div>
+      <div class="vl" id="kComfort">—%</div>
+      <div class="sub" id="kComfortSub">occupied minutes in 23–26.5°C</div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <!-- ================= LEFT ================= -->
+    <div class="col">
+      <div class="card" style="position:relative">
+        <h3>Today — grid draw: baseline vs UrjaSetu AI
+          <span class="tag">● live &nbsp;– – forecast &nbsp;– baseline</span></h3>
+        <canvas id="mainChart" height="330"></canvas>
+        <div class="tt" id="tt"></div>
+      </div>
+
+      <div class="card">
+        <h3>Mission control</h3>
+        <div class="ctrls">
+          <div class="switch on" id="aiSwitch"><div class="track"></div><span>AI Brain: ON</span></div>
+          <button id="btnPlay" class="primary">⏸ Pause</button>
+          <button class="spd" data-s="1">1×</button>
+          <button class="spd on" data-s="60">60×</button>
+          <button class="spd" data-s="300">300×</button>
+          <button id="btnNoon">🌞 Jump to 12:45</button>
+          <button id="btnPeak">⚡ Jump to 17:30</button>
+          <button id="btnFault" class="danger">🚨 Inject fault: AHU-2 valve stuck</button>
+          <button id="btnReset">↺ Reset day</button>
+        </div>
+        <div class="hint">
+          <b>Demo script:</b> ① Press play, let the AI earn savings → ② hit <b>Jump to 17:30</b> to watch pre-cooling + battery arbitrage beat the evening peak → ③
+          <b>Inject the fault</b> and watch the AI catch a stuck AHU valve in minutes and quarantine it → ④ toggle the <b>AI Brain OFF</b> and watch the gap stop growing.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Zone intelligence — 8 zones · 4 floors <span class="tag" id="zoneSummary">—</span></h3>
+        <div class="zones" id="zoneGrid"></div>
+      </div>
+    </div>
+
+    <!-- ================= RIGHT ================= -->
+    <div class="col">
+      <div class="card">
+        <h3>Solar + battery orchestration</h3>
+        <div class="row"><span>Rooftop solar (92 kWp)</span><b id="solarNow">— kW</b></div>
+        <div class="row"><span>Solar used today</span><b id="solarUsed">— kWh</b></div>
+        <div class="bar"><div class="fill" id="socBar" style="width:32%"></div></div>
+        <div class="row"><span>Battery (150 kWh)</span><b id="socTxt">—</b></div>
+        <div class="row"><span>Right now</span><b id="battNow">idle</b></div>
+        <div class="row"><span>Next planned action</span><b id="battNext">—</b></div>
+      </div>
+
+      <div class="card">
+        <h3>AI decision feed <span class="tag">live</span></h3>
+        <div class="feed" id="feed"></div>
+      </div>
+
+      <div class="card">
+        <h3>Impact — today so far</h3>
+        <table>
+          <thead><tr><th>Metric</th><th>Baseline</th><th>UrjaSetu</th><th>Δ</th></tr></thead>
+          <tbody>
+            <tr><td>Energy</td><td id="iBaseKwh">—</td><td id="iAiKwh">—</td><td class="g" id="iDKwh">—</td></tr>
+            <tr><td>Cost</td><td id="iBaseCost">—</td><td id="iAiCost">—</td><td class="g" id="iDCost">—</td></tr>
+            <tr><td>Peak demand</td><td id="iBasePk">—</td><td id="iAiPk">—</td><td class="g" id="iDPk">—</td></tr>
+            <tr><td>CO₂</td><td id="iBaseCo2">—</td><td id="iAiCo2">—</td><td class="g" id="iDCo2">—</td></tr>
+            <tr><td>Comfort</td><td id="iBaseCf">—</td><td id="iAiCf">—</td><td class="g" id="iDCf">—</td></tr>
+          </tbody>
+        </table>
+        <canvas id="costChart" height="150" style="margin-top:10px"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <details>
+    <summary>⚙️ &nbsp;How UrjaSetu AI works — architecture &amp; business logic</summary>
+    <p><b>The 15-minute autonomy loop:</b> every 15 minutes (simulated here in fast-forward), UrjaSetu (1) <b>forecasts</b> the next hours — occupancy from bookings/Wi-Fi, ambient temperature &amp; humidity, rooftop solar, and the Time-of-Day tariff curve; (2) <b>optimizes</b> — solves for per-zone setpoints, battery charge/discharge and load-shifting that minimise <i>cost</i> subject to a hard <b>comfort constraint</b> (occupied zones must stay in the 23–26.5°C band, ECBC/ISHRAE-aligned); (3) <b>acts</b> — writes setpoints to AHUs/chillers and dispatches the battery inverter; and (4) <b>verifies</b> — compares expected vs actual power to detect faults (stuck valves, night wastage) within minutes, quantifying the ₹ lost and raising a work order.</p>
+    <svg viewBox="0 0 960 210" style="width:100%;margin-top:6px">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#3DCD58"/></marker></defs>
+      <g font-size="12" fill="#E8EEF7" font-family="sans-serif">
+        <rect x="10" y="55" width="200" height="100" rx="12" fill="#0E1626" stroke="#1E2A44"/>
+        <text x="110" y="80" text-anchor="middle" font-weight="bold">FIELD LAYER</text>
+        <text x="110" y="102" text-anchor="middle" fill="#8CA0B8" font-size="11">Smart energy meter</text>
+        <text x="110" y="120" text-anchor="middle" fill="#8CA0B8" font-size="11">₹500 ESP32 temp/CO₂ nodes</text>
+        <text x="110" y="138" text-anchor="middle" fill="#8CA0B8" font-size="11">Existing BMS · Modbus/BACnet</text>
+        <rect x="260" y="55" width="180" height="100" rx="12" fill="#0E1626" stroke="#1E2A44"/>
+        <text x="350" y="80" text-anchor="middle" font-weight="bold">EDGE AGENT</text>
+        <text x="350" y="102" text-anchor="middle" fill="#8CA0B8" font-size="11">Local buffering</text>
+        <text x="350" y="120" text-anchor="middle" fill="#8CA0B8" font-size="11">Offline-safe fallback</text>
+        <text x="350" y="138" text-anchor="middle" fill="#8CA0B8" font-size="11">Secure MQTT/TLS uplink</text>
+        <rect x="490" y="30" width="230" height="150" rx="12" fill="#12321f" stroke="#2fae4b"/>
+        <text x="605" y="55" text-anchor="middle" font-weight="bold" fill="#5fe08a">URJASETU CLOUD BRAIN</text>
+        <text x="605" y="78" text-anchor="middle" fill="#8CA0B8" font-size="11">① Forecast: occupancy · weather ·</text>
+        <text x="605" y="95" text-anchor="middle" fill="#8CA0B8" font-size="11">solar · TOD tariff</text>
+        <text x="605" y="116" text-anchor="middle" fill="#8CA0B8" font-size="11">② Comfort-constrained optimizer</text>
+        <text x="605" y="137" text-anchor="middle" fill="#8CA0B8" font-size="11">③ Anomaly detection (₹-quantified)</text>
+        <text x="605" y="158" text-anchor="middle" fill="#8CA0B8" font-size="11">④ Verification &amp; work orders</text>
+        <rect x="770" y="55" width="180" height="100" rx="12" fill="#0E1626" stroke="#1E2A44"/>
+        <text x="860" y="80" text-anchor="middle" font-weight="bold">CONTROL WRITES</text>
+        <text x="860" y="102" text-anchor="middle" fill="#8CA0B8" font-size="11">HVAC setpoints · schedules</text>
+        <text x="860" y="120" text-anchor="middle" fill="#8CA0B8" font-size="11">Battery inverter dispatch</text>
+        <text x="860" y="138" text-anchor="middle" fill="#8CA0B8" font-size="11">AHU isolation on fault</text>
+        <line x1="210" y1="105" x2="256" y2="105" stroke="#3DCD58" stroke-width="2" marker-end="url(#ar)"/>
+        <line x1="440" y1="105" x2="486" y2="105" stroke="#3DCD58" stroke-width="2" marker-end="url(#ar)"/>
+        <line x1="720" y1="105" x2="766" y2="105" stroke="#3DCD58" stroke-width="2" marker-end="url(#ar)"/>
+        <path d="M 860 158 C 860 200 605 205 605 185" fill="none" stroke="#4DA3FF" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ar)"/>
+        <text x="737" y="205" text-anchor="middle" fill="#4DA3FF" font-size="10.5">closed-loop verification every 15 min</text>
+      </g>
+    </svg>
+    <p><b>Schneider-ready:</b> the field layer speaks Modbus/BACnet — native citizens of Schneider Electric's <i>EcoStruxure™ Building Operation</i>. UrjaSetu is designed as an intelligence layer <b>on top of</b> EcoStruxure/Wiser deployments, not a competitor to them: Schneider sells the muscles, UrjaSetu is the brain that makes them 25–35% cheaper to run.</p>
+  </details>
+
+  <p class="disc">Demonstration mode: physics-based digital twin of a ~90,000 sq ft Mumbai commercial building (representative occupancy profiles, Mumbai climate, TOD-style tariff ₹6.2–₹13.4/kWh, grid factor 0.71 kg CO₂/kWh).
+  In production UrjaSetu reads live meter &amp; sensor data and writes controls via Modbus/BACnet/Wiser/EcoStruxure APIs. Built for the Yuva Yodha Energy Tech Hackathon 2026 by Team UrjaSetu.</p>
+</div>
+
+<!-- ============================================================
+     SIMULATION ENGINE (pure physics — no DOM, deterministic)
+     ============================================================ -->
+<script id="engine">
+// ---- Tariff: representative Mumbai Time-of-Day commercial tariff (₹/kWh) ----
+var TARIFF=[[0,6.2],[6,8.0],[10,9.2],[18,13.4],[22,6.2],[24,6.2]];
+function tariffAt(h){
+  for(var i=0;i<TARIFF.length-1;i++){ if(h>=TARIFF[i][0]&&h<TARIFF[i+1][0]) return TARIFF[i][1]; }
+  return 6.2;
+}
+function isPeak(h){ return h>=18 && h<22; }
+var GRID_CO2=0.71;              // kg CO2 per grid kWh (India avg)
+var SOLAR_CAP=130;              // kWp rooftop + canopy PV
+var BATT_CAP=150, BATT_MAX=40;  // kWh, kW
+
+// ---- Occupancy profiles: piecewise [hour, fraction of capacity] ----
+var OCC={
+  office:[[0,0],[7,0],[8,.15],[9,.65],[10,.9],[13,.85],[13.5,.5],[14,.62],[18,.8],[19,.3],[20,.1],[21,.02],[24,0]],
+  lobby :[[0,0],[6,0],[7,.1],[9,.5],[11,.4],[14,.3],[17,.55],[20,.15],[22,.02],[24,0]],
+  conf  :[[0,0],[8,0],[9,.1],[10.5,.95],[12,.15],[14.5,.9],[16,.25],[17.5,.6],[19,.05],[24,0]],
+  cafe  :[[0,0],[7,0],[8,.15],[9,.4],[10,.15],[12,.4],[12.5,.9],[14,.8],[15,.15],[17,.08],[19,.03],[24,0]],
+  server:[[0,1],[24,1]],
+  lab   :[[0,0],[8,0],[9,.5],[12,.7],[13,.35],[14,.6],[17,.45],[18,.08],[19,0],[24,0]]
+};
+function interp(keys,h){
+  if(h<=keys[0][0]) return keys[0][1];
+  for(var i=0;i<keys.length-1;i++){
+    var a=keys[i],b=keys[i+1];
+    if(h>=a[0]&&h<=b[0]) return a[1]+(b[1]-a[1])*((h-a[0])/(b[0]-a[0]));
+  }
+  return keys[keys.length-1][1];
+}
+function occOf(type,h){ return interp(OCC[type],h); }
+function occAhead(type,h){ // max occupancy in the next 0.25–1.0 h window
+  var m=0; for(var t=h+0.25;t<=h+1.001;t+=0.25){ var v=occOf(type,t); if(v>m)m=v; } return m;
+}
+
+// ---- Weather & solar (deterministic, Mumbai-like) ----
+function tout(h){ return Math.max(25, 27+7*Math.sin(Math.PI*(h-6)/14)); }
+function solarKW(h){
+  if(h<6.4||h>18.6) return 0;
+  var x=(h-6.4)/12.2;
+  var w=0.9+0.08*Math.sin(h*2.1)+0.05*Math.sin(h*4.7+1);
+  return Math.max(0, SOLAR_CAP*Math.sin(Math.PI*x)*w);
+}
+function copAt(t){ return Math.max(2.2, 2.9-(t-30)*0.05); }
+
+// ---- Building definition ----
+var ZDEF=[
+  {name:'Lobby & Reception', floor:'Ground', type:'lobby', cap:60},
+  {name:'Open Office L1',    floor:'Floor 1', type:'office',cap:80},
+  {name:'Conference Nimbus', floor:'Floor 1', type:'conf',  cap:16},
+  {name:'Open Office L2',    floor:'Floor 2', type:'office',cap:80},
+  {name:'Conference Monsoon',floor:'Floor 2', type:'conf',  cap:16},
+  {name:'Server & UPS Room', floor:'Floor 2', type:'server',cap:0},
+  {name:'Cafeteria',         floor:'Ground', type:'cafe',  cap:70},
+  {name:'Lab Annex',         floor:'Floor 3', type:'lab',   cap:45}
+];
+var COMF_LO=23.0, COMF_HI=26.5;   // comfort band (°C), ECBC/ISHRAE-aligned
+
+function makeState(){
+  return {
+    time:360, soc:0.32*BATT_CAP,
+    zones:ZDEF.map(function(z){ return {name:z.name,floor:z.floor,type:z.type,cap:z.cap,
+                                        Tin:27.0,hvac:0,mode:'OFF',set:0,occ:0}; }),
+    cumKWh:0, cumCost:0, cumCO2:0, cumSolarKWh:0,
+    comfortOk:0, comfortTot:0, peakGrid:0,
+    gridKw:0, solarKw:0, solarUse:0, battPw:0, hvacKw:0, baseKw:0,
+    fault:null
+  };
+}
+
+// ---- Per-zone control policy ----
+function zonePolicy(z, h, aiOn, state){
+  var occ=z.occ;
+  if(!aiOn){ // ---------- BASELINE: timer-scheduled, 23°C, zero awareness ----------
+    if(z.type==='server'){ return {set:22, mode:'COOL'}; }
+    if(h>=6 && h<22){ return {set:23, mode:'COOL'}; }   // runs flat-out whether or not people are there
+    return {set:0, mode:'OFF'};
+  }
+  // ---------- URJASETU AI: occupancy + tariff + comfort-constrained ----------
+  if(z.type==='server'){ return {set:24, mode:'COOL'}; } // IT-friendly, still cooler than baseline needs not be 22
+  var ahead=occAhead(z.type,h);
+  if(occ>0.06){
+    if(isPeak(h))                 return {set:26,  mode:'COOL'};      // coast through peak
+    if(h>=16.5 && h<18)           return {set:24.5,mode:'PRE-COOL'};  // bank coolth before peak
+    return {set:25.5, mode:'COOL'};                                    // efficient comfort
+  }
+  if(ahead>0.30)                  return {set:24.3,mode:'PRE-COOL'};  // meeting in <1 h → pre-cool
+  if(h>=5.5 && h<22.5)            return {set:28.5,mode:'SETBACK'};   // empty → drift
+  return {set:0, mode:'OFF'};                                          // night shutdown
+}
+
+// ---- One simulation step (dt in sim-minutes) ----
+function step(s, dt, aiOn){
+  var h=s.time/60, i, z;
+  var hvac=0, base=14+12;                      // 14 kW lifts/pumps/AHU aux + 12 kW IT (server)
+  for(i=0;i<s.zones.length;i++){
+    z=s.zones[i];
+    z.occ=occOf(z.type,h);
+    var pol=zonePolicy(z,h,aiOn,s);
+    z.set=pol.set; z.mode=pol.mode;
+    var Tout=tout(h);
+    if(pol.mode==='OFF'){
+      z.hvac=0;
+      z.Tin += (Tout-z.Tin)*(1-Math.exp(-dt/45));
+    } else {
+      var kenv=0.18+z.cap*0.030;               // envelope coupling, kW-th/°C
+      var thermal=kenv*Math.max(0,Tout-pol.set) + z.occ*z.cap*0.12;   // envelope + people/equipment gains
+      if(z.type==='server') thermal=kenv*Math.max(0,Tout-pol.set)+8;  // IT heat load
+      var capTherm=(z.type==='server')?12:(20+z.cap*0.55);            // plant capacity
+      var delivered=Math.min(thermal,capTherm);
+      var faultMul=1, overcool=false;
+      if(s.fault && s.fault.zone===i && s.fault.active && !s.fault.fixed){ faultMul=1.6; overcool=true; }
+      z.hvac=(delivered/copAt(Tout))*faultMul;
+      if(overcool){ z.Tin += ((pol.set-2.2)-z.Tin)*(1-Math.exp(-dt/25)); }         // stuck valve → over-cooling
+      else{ var tau=Math.max(6, 16-Math.abs(z.Tin-pol.set)*2);
+            z.Tin += (pol.set-z.Tin)*(1-Math.exp(-dt/tau)); }
+    }
+    hvac+=z.hvac;
+    if(z.type!=='server') base+=1.8+z.occ*z.cap*0.045; // lighting & plug loads
+  }
+  var load=hvac+base;
+  var sol=solarKW(h);
+
+  // ---- battery policy (AI only; baseline building lets its battery sit idle) ----
+  var charge=0, dis=0;
+  var solarUse=Math.min(sol,load);
+  if(aiOn){
+    if(sol>load && s.soc<BATT_CAP) charge=Math.min(BATT_MAX, sol-load, (BATT_CAP-s.soc)*2); // free solar surplus first
+    else if(h>=16 && h<18 && s.soc<126) charge=Math.min(25,126-s.soc);                      // grid top-up @ ₹9.2
+    var netLoad=load+charge-solarUse;
+    if(isPeak(h) && s.soc>10) dis=Math.min(BATT_MAX,(s.soc-8)*4, netLoad);                  // shave the ₹13.4 peak
+  }
+  var grid=Math.max(0, load+charge-solarUse-dis);
+
+  var dtH=dt/60;
+  s.cumKWh+=grid*dtH;  s.cumCost+=grid*tariffAt(h)*dtH;
+  s.cumCO2+=grid*GRID_CO2*dtH;  s.cumSolarKWh+=solarUse*dtH;
+  if(grid>s.peakGrid) s.peakGrid=grid;
+  for(i=0;i<s.zones.length;i++){ z=s.zones[i];
+    if(z.occ>0.06){ s.comfortTot+=dt; if(z.Tin>=COMF_LO-0.4 && z.Tin<=COMF_HI+0.6) s.comfortOk+=dt; } }
+  s.soc=Math.max(0,Math.min(BATT_CAP, s.soc+(charge-dis)*dtH));
+  s.gridKw=grid; s.solarKw=sol; s.solarUse=solarUse; s.battPw=dis-charge; s.hvacKw=hvac; s.baseKw=base;
+  s.time+=dt;
+  return s;
+}
+
+// ---- Full-day precompute (dt-minute resolution, 06:00→24:00) ----
+function simulateDay(aiOn, faultSpec, dtStep){
+  dtStep=dtStep||2;
+  var s=makeState();
+  if(faultSpec) s.fault={zone:faultSpec.zone, active:true, fixed:false, detected:true, at:360};
+  var T=[],G=[],S=[],C=[];
+  while(s.time<1440){
+    step(s,dtStep,aiOn);
+    T.push(s.time); G.push(s.gridKw); S.push(s.solarKw); C.push(s.cumCost);
+  }
+  return {dt:dtStep, t:T, grid:G, solar:S, cost:C,
+          kwh:s.cumKWh, costFinal:s.cumCost, co2:s.cumCO2,
+          peak:s.peakGrid, comfortPct: s.comfortTot>0? 100*s.comfortOk/s.comfortTot : 100,
+          soc:s.soc};
+}
+</script>
+
+<!-- ============================================================
+     APP LAYER — live loop, rendering, interactions
+     ============================================================ -->
+<script id="app">
+(function(){
+"use strict";
+var $=function(id){return document.getElementById(id);};
+var fmt=function(n,d){return n.toLocaleString('en-IN',{minimumFractionDigits:d||0,maximumFractionDigits:d||0});};
+
+// ---------- precomputed reference days ----------
+var baseDay=simulateDay(false,null,2);
+var aiDay  =simulateDay(true ,null,2);
+var faultDay=simulateDay(true ,{zone:1},2); // for fault-cost estimate
+var faultWastePerDay=faultDay.costFinal-aiDay.costFinal;
+
+// ---------- live state ----------
+var S=makeState();
+var liveT=[],liveG=[],liveC=[];         // recorded live trace
+var playing=true, speed=60, aiOn=true, acc=0;
+var feedItems=[], feedSeen=0;
+var dayEvents=[
+ {at:361,  cls:'',   txt:'🌅 <b>06:00</b> — Building wake-up. Night audit: HVAC stayed off, 0 kWh wasted overnight.'},
+ {at:455,  cls:'',   txt:'👥 Occupancy ramp starting — comfort mode engaged across office zones (25.5°C, ECBC band).'},
+ {at:582,  cls:'',   txt:'📅 Booking detected: Conference Nimbus @10:30 — pre-cooling to 24.3°C powered by rising solar.'},
+ {at:660,  cls:'money',txt:'☀️ Solar climbing past 60 kW — chiller load shifting onto free sunshine.'},
+ {at:765,  cls:'money',txt:'🧊 Thermal pre-storage: occupied zones banked at 24.5°C to coast through the afternoon heat.'},
+ {at:872,  cls:'',   txt:'📅 Booking detected: Conference Monsoon @14:30 — cooling boost scheduled.'},
+ {at:960,  cls:'money',txt:'⚡ <b>Peak window ahead</b> (18:00–22:00 @ ₹13.4/kWh) — battery top-up started, zones pre-cooled.'},
+ {at:1080, cls:'money',txt:'🚨 <b>PEAK TARIFF ACTIVE</b> — battery discharging, zones at 26°C. Grid draw being shaved hard.'},
+ {at:1245, cls:'',   txt:'🌙 Occupancy &lt; 10% — staged shutdown sequencing begins.'},
+ {at:1306, cls:'',   txt:'✅ Night setback armed. HVAC off. The AI keeps watching.'}
+];
+var evFired={};
+
+// ---------- zone grid ----------
+var zoneEls=[];
+(function(){
+  var g=$('zoneGrid');
+  ZDEF.forEach(function(z,i){
+    var d=document.createElement('div'); d.className='zone'; d.id='zone'+i;
+    d.innerHTML='<div class="chip" id="zChip'+i+'">OFF</div>'+
+      '<div class="zn">'+z.name+'</div><div class="zf">'+z.floor+'</div>'+
+      '<div class="zt"><span id="zT'+i+'">—</span><small>°C</small></div>'+
+      '<div class="zo" id="zOcc'+i+'">—</div>'+
+      '<div class="zo" id="zKw'+i+'" style="color:#8CA0B8">—</div>';
+    g.appendChild(d);
+    zoneEls.push(d);
+  });
+})();
+
+// ---------- feed ----------
+function feed(html, cls){
+  var h=Math.floor(S.time/60), m=Math.floor(S.time%60);
+  var t=(h<10?'0':'')+h+':'+(m<10?'0':'')+m;
+  feedItems.unshift({t:t,html:html,cls:cls||''});
+  if(feedItems.length>32) feedItems.pop();
+  renderFeed();
+}
+function renderFeed(){
+  var f=$('feed');
+  f.innerHTML=feedItems.map(function(e){
+    return '<div class="fev '+e.cls+'"><div class="t">'+e.t+'</div><div>'+e.html+'</div></div>';
+  }).join('');
+}
+
+// ---------- baseline-at-now helpers (interpolate precomputed day) ----------
+function baseAtNow(arr){
+  var idx=Math.min(arr.length-1, Math.max(0, Math.floor((S.time-360)/baseDay.dt)));
+  return arr[idx];
+}
+function fmtT(n){ return '₹'+fmt(n); }
+
+// ---------- main render ----------
+function render(){
+  var h=S.time/60;
+  // header
+  var hh=Math.floor(h),mm=Math.floor(S.time%60);
+  $('clock').textContent=(hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm;
+  $('tariffPill').textContent='₹'+tariffAt(h).toFixed(1)+'/kWh'+(isPeak(h)?' ⚡PEAK':'');
+  $('aiState').textContent=aiOn?'ON':'OFF';
+  $('aiDot').className='dot'+(aiOn?'':' off');
+
+  var baseCostNow=baseAtNow(baseDay.cost);
+  var save=baseCostNow-S.cumCost;
+  var savePct=baseCostNow>0?100*save/baseCostNow:0;
+
+  // KPIs
+  var baseGridNow=baseAtNow(baseDay.grid);
+  $('kGrid').textContent=S.gridKw.toFixed(1)+' kW';
+  var dG=baseGridNow>1?100*(S.gridKw-baseGridNow)/baseGridNow:0;
+  var el=$('kGridDelta');
+  el.textContent=(dG<=0?'▼ ':'▲ ')+Math.abs(dG).toFixed(0)+'% vs baseline';
+  el.className='sub '+(dG<=0?'good':'bad');
+  $('kSave').textContent=fmtT(save);
+  $('kSavePct').textContent=savePct.toFixed(0)+'% cheaper than baseline today';
+  $('kSolar').textContent=S.solarKw.toFixed(1)+' kW';
+  $('kSolarSub').textContent=fmt(S.solarUse)+' kWh harvested today';
+  $('kSoc').textContent=Math.round(100*S.soc/BATT_CAP)+'%';
+  var bs=$('kBattState');
+  if(S.battPw>0.5){bs.textContent='discharging '+S.battPw.toFixed(0)+' kW → grid peak';bs.className='sub good';}
+  else if(S.battPw<-0.5){bs.textContent='charging '+(-S.battPw).toFixed(0)+' kW '+(S.solarKw>S.hvacKw+S.baseKw?'(solar surplus)':'(pre-peak ₹9.2)');bs.className='sub';}
+  else{bs.textContent='idle — waiting for its window';bs.className='sub';}
+  $('kCo2').textContent=fmt(co2Avoided())+' kg';
+
+  var cf=S.comfortTot>0?100*S.comfortOk/S.comfortTot:100;
+  $('kComfort').textContent=cf.toFixed(1)+'%';
+  $('kComfortSub').textContent='occupied minutes inside 23–26.5°C band';
+
+  // zones
+  var cooling=0,pcool=0,sb=0,off=0;
+  S.zones.forEach(function(z,i){
+    $('zT'+i).textContent=z.Tin.toFixed(1);
+    var ppl=Math.round(z.occ*z.cap);
+    $('zOcc'+i).textContent=z.type==='server' ? 'IT load · 24/7' : (ppl>0?ppl+' people':'empty');
+    $('zKw'+i).textContent='HVAC '+z.hvac.toFixed(1)+' kW · set '+ (z.set? z.set.toFixed(1)+'°':'—');
+    var chip=$('zChip'+i);
+    var label=z.mode, cls=z.mode;
+    if(S.fault&&S.fault.zone===i&&S.fault.active&&!S.fault.fixed){label='FAULT';cls='FAULT';zoneEls[i].classList.add('faulty');}
+    else zoneEls[i].classList.remove('faulty');
+    chip.textContent=label; chip.className='chip '+cls;
+    if(z.mode==='COOL')cooling++; else if(z.mode==='PRE-COOL')pcool++; else if(z.mode==='SETBACK')sb++; else off++;
+  });
+  $('zoneSummary').textContent=cooling+' cooling · '+pcool+' pre-cool · '+sb+' setback · '+off+' off';
+
+  // battery card
+  $('solarNow').textContent=S.solarKw.toFixed(1)+' kW';
+  $('solarUsed').textContent=fmt(S.cumSolarKWh)+' kWh';
+  var socPct=100*S.soc/BATT_CAP;
+  $('socBar').style.width=socPct+'%';
+  $('socTxt').textContent=Math.round(S.soc)+' / '+BATT_CAP+' kWh ('+socPct.toFixed(0)+'%)';
+  var bn=$('battNow');
+  if(S.battPw>0.5){bn.textContent='discharging '+S.battPw.toFixed(0)+' kW';bn.className='b g';}
+  else if(S.battPw<-0.5){bn.textContent='charging '+(-S.battPw).toFixed(0)+' kW';bn.className='b b';}
+  else{bn.textContent='idle';bn.className='b';}
+  $('battNext').textContent=nextBattAction(h);
+
+  // impact table
+  var baseKwhNow=baseCostNow/tariffAvgUpToNow(); // ≈ kWh (avg tariff up to now)
+  $('iBaseKwh').textContent=fmt(baseKwhNow)+' kWh';
+  $('iAiKwh').textContent=fmt(S.cumKWh)+' kWh';
+  var dk=baseKwhNow>0?100*(1-S.cumKWh/baseKwhNow):0;
+  $('iDKwh').textContent='−'+dk.toFixed(0)+'%';
+  $('iBaseCost').textContent=fmtT(baseCostNow);
+  $('iAiCost').textContent=fmtT(S.cumCost);
+  $('iDCost').textContent='−₹'+fmt(save)+' ('+savePct.toFixed(0)+'%)';
+  $('iBasePk').textContent=baseDay.peak.toFixed(0)+' kW';
+  $('iAiPk').textContent=S.peakGrid.toFixed(0)+' kW';
+  $('iDPk').textContent='−'+(100*(1-S.peakGrid/baseDay.peak)).toFixed(0)+'%';
+  $('iBaseCo2').textContent=fmt(co2Base())+' kg';
+  $('iAiCo2').textContent=fmt(S.cumCO2)+' kg';
+  $('iDCo2').textContent='−'+fmt(Math.max(0,co2Base()-S.cumCO2))+' kg';
+  $('iBaseCf').textContent=baseDay.comfortPct.toFixed(0)+'%';
+  $('iAiCf').textContent=cf.toFixed(0)+'%';
+  $('iDCf').textContent=cf>=baseDay.comfortPct?'✓ maintained':(cf-baseDay.comfortPct).toFixed(0)+'%';
+
+  drawMain(); drawCost();
+}
+// helpers kept simple & honest: precompute baseline CO2/kWh cumulative arrays once
+var baseCumKWh=[],baseCumCO2=[];
+(function(){
+  var s=makeState(); var dt=2;
+  while(s.time<1440){ step(s,dt,false); baseCumKWh.push(s.cumKWh); baseCumCO2.push(s.cumCO2); }
+})();
+function baseAtNowIdx(){ return Math.min(baseCumKWh.length-1, Math.max(0, Math.floor((S.time-360)/2))); }
+function baseKwhNowF(){ return baseCumKWh[baseAtNowIdx()]||0; }
+function co2Base(){ return baseCumCO2[baseAtNowIdx()]||0; }
+function co2Avoided(){ return Math.max(0, co2Base()-S.cumCO2); }
+function tariffAvgUpToNow(){ return baseKwhNowF()>0? baseAtNow(baseDay.cost)/baseKwhNowF() : 9; }
+function nextBattAction(h){
+  if(isPeak(h)) return 'holding discharge till 22:00';
+  if(h<16) return 'grid top-up at 16:00 → discharge 18:00–22:00';
+  if(h<22) return 'discharging till 22:00 → recharge on night tariff';
+  if(h<22) return 'recharge after 22:00 @ ₹6.2';
+  return 'solar charging from 06:30';
+}
+
+// ---------- charts ----------
+function setupCanvas(c){
+  var dpr=window.devicePixelRatio||1;
+  var w=c.clientWidth||c.parentNode.clientWidth;
+  c.width=w*dpr; c.height=parseInt(c.getAttribute('height'))*dpr;
+  c.style.height=c.getAttribute('height')+'px';
+  var ctx=c.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx:ctx,w:w,h:parseInt(c.getAttribute('height'))};
+}
+function timeToX(t,w,ml,mr){ return ml+(t-360)/(1440-360)*(w-ml-mr); }
+
+function drawMain(){
+  var c=$('mainChart'); var o=setupCanvas(c); var ctx=o.ctx,w=o.w,H=o.h;
+  var ml=46,mr=14,mt=16,mb=24, pw=w-ml-mr, ph=H-mt-mb, YMAX=120;
+  ctx.clearRect(0,0,w,H);
+  var X=function(t){return ml+(t-360)/1080*pw;}, Y=function(v){return mt+ph-(v/YMAX)*ph;};
+  // tariff bands
+  ctx.fillStyle='rgba(255,92,92,.09)'; ctx.fillRect(X(1080),mt,X(1320)-X(1080),ph);
+  ctx.fillStyle='rgba(255,176,32,.07)'; ctx.fillRect(X(990),mt,X(1080)-X(990),ph);
+  ctx.fillStyle='rgba(255,92,92,.65)'; ctx.font='10px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('PEAK ₹13.4',X(1200),mt+11);
+  // grid lines + y labels
+  ctx.strokeStyle='#1c2740'; ctx.fillStyle='#66748c'; ctx.font='10px sans-serif'; ctx.textAlign='right';
+  for(var v=0;v<=YMAX;v+=30){ ctx.beginPath();ctx.moveTo(ml,Y(v));ctx.lineTo(w-mr,Y(v));ctx.stroke();
+    ctx.fillText(v,ml-6,Y(v)+3); }
+  // x labels
+  ctx.textAlign='center';
+  for(var hh=6;hh<=24;hh+=3){ var t=hh*60; ctx.fillText(hh===24?'12a':(hh>12?hh-12+'p':hh+'a'),X(t),H-8); }
+  // solar area
+  ctx.beginPath(); ctx.moveTo(X(360),Y(0));
+  for(var i=0;i<aiDay.t.length;i++) ctx.lineTo(X(aiDay.t[i]),Y(Math.min(YMAX,aiDay.solar[i])));
+  ctx.lineTo(X(1440),Y(0)); ctx.closePath();
+  ctx.fillStyle='rgba(61,205,88,.13)'; ctx.fill();
+  // baseline curve
+  ctx.beginPath();
+  for(i=0;i<baseDay.t.length;i++){ var px=X(baseDay.t[i]),py=Y(Math.min(YMAX,baseDay.grid[i])); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+  ctx.strokeStyle='#5d708c'; ctx.lineWidth=1.6; ctx.setLineDash([]); ctx.stroke();
+  // AI forecast dashed
+  ctx.beginPath();
+  for(i=0;i<aiDay.t.length;i++){ px=X(aiDay.t[i]); py=Y(Math.min(YMAX,aiDay.grid[i])); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+  ctx.strokeStyle='#3DCD58'; ctx.lineWidth=1.6; ctx.setLineDash([6,5]); ctx.stroke(); ctx.setLineDash([]);
+  // live trace
+  if(liveT.length>1){
+    ctx.beginPath();
+    for(i=0;i<liveT.length;i++){ px=X(liveT[i]); py=Y(Math.min(YMAX,liveG[i])); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+    ctx.strokeStyle='#7CFF9B'; ctx.lineWidth=2.6; ctx.stroke();
+  }
+  // now line
+  var nx=X(S.time);
+  ctx.strokeStyle='rgba(232,238,247,.4)'; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+  ctx.beginPath();ctx.moveTo(nx,mt);ctx.lineTo(nx,mt+ph);ctx.stroke();ctx.setLineDash([]);
+  // legend
+  ctx.textAlign='left'; ctx.font='11px sans-serif';
+  ctx.fillStyle='#5d708c'; ctx.fillText('— baseline (dumb building)',ml+4,mt+12);
+  ctx.fillStyle='#3DCD58'; ctx.fillText('– – AI full-day forecast',ml+230,mt+12);
+  ctx.fillStyle='#7CFF9B'; ctx.fillText('● live',ml+420,mt+12);
+  ctx.fillStyle='#3DCD58'; ctx.fillText('▨ solar',ml+480,mt+12);
+}
+function drawCost(){
+  var c=$('costChart'); var o=setupCanvas(c); var ctx=o.ctx,w=o.w,H=o.h;
+  var ml=44,mr=52,mt=8,mb=18,pw=w-ml-mr,ph=H-mt-mb;
+  var cmax=Math.max(baseDay.costFinal,1);
+  ctx.clearRect(0,0,w,H);
+  var X=function(t){return ml+(t-360)/1080*pw;},Y=function(v){return mt+ph-(v/cmax)*ph;};
+  ctx.strokeStyle='#1c2740'; ctx.fillStyle='#66748c'; ctx.font='9.5px sans-serif'; ctx.textAlign='right';
+  for(var v=0;v<=1.01;v+=0.25){ ctx.beginPath();ctx.moveTo(ml,Y(v*cmax));ctx.lineTo(w-mr,Y(v*cmax));ctx.stroke();
+    ctx.fillText('₹'+fmt(v*cmax),ml-4,Y(v*cmax)+3); }
+  // fill between baseline & live
+  ctx.beginPath();
+  for(var i=0;i<baseDay.t.length;i++){ var px=X(baseDay.t[i]),py=Y(baseDay.cost[i]); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+  for(i=liveT.length-1;i>=0;i--){ ctx.lineTo(X(liveT[i]),Y(liveC[i])); }
+  if(liveT.length>1){ ctx.closePath(); ctx.fillStyle='rgba(61,205,88,.20)'; ctx.fill(); }
+  // baseline line
+  ctx.beginPath();
+  for(i=0;i<baseDay.t.length;i++){ px=X(baseDay.t[i]);py=Y(baseDay.cost[i]); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+  ctx.strokeStyle='#5d708c'; ctx.lineWidth=1.4; ctx.stroke();
+  // live line
+  if(liveT.length>1){
+    ctx.beginPath();
+    for(i=0;i<liveT.length;i++){ px=X(liveT[i]);py=Y(liveC[i]); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+    ctx.strokeStyle='#3DCD58'; ctx.lineWidth=2.2; ctx.stroke();
+  }
+  // end labels
+  ctx.textAlign='left'; ctx.font='10px sans-serif';
+  ctx.fillStyle='#5d708c'; ctx.fillText('₹'+fmt(baseDay.costFinal),w-mr+2,Y(baseDay.costFinal)+3);
+  var sc=liveC.length?liveC[liveC.length-1]:0;
+  ctx.fillStyle='#3DCD58'; ctx.fillText('₹'+fmt(sc),w-mr+2,Y(sc)+3);
+  ctx.fillStyle='#8CA0B8'; ctx.font='10.5px sans-serif';
+  ctx.fillText('Green area = money kept in your pocket',ml+4,mt+10);
+}
+
+// ---------- tooltip ----------
+var tt=$('tt');
+$('mainChart').addEventListener('mousemove',function(e){
+  var r=this.getBoundingClientRect();
+  var t=360+((e.clientX-r.left-46)/(r.width-60))*1080;
+  if(t<360||t>1440){tt.style.display='none';return;}
+  var i=Math.min(baseDay.t.length-1,Math.floor((t-360)/baseDay.dt));
+  var li=Math.min(liveT.length-1,Math.floor((t-360)/2));
+  var lv=(liveT.length&&liveT[li]>=t-2&&liveT[li]<=t+2)?liveG[li].toFixed(1)+' kW':'—';
+  tt.innerHTML='<b>'+Math.floor(t/60)+':'+(Math.floor(t%60)<10?'0':'')+Math.floor(t%60)+'</b><br>'+
+    'Baseline: '+baseDay.grid[i].toFixed(1)+' kW · ₹'+fmt(baseDay.cost[i])+'<br>'+
+    'AI forecast: '+aiDay.grid[i].toFixed(1)+' kW<br>'+
+    'Live: '+lv+'<br>Solar: '+aiDay.solar[i].toFixed(1)+' kW';
+  tt.style.display='block';
+  tt.style.left=Math.min(r.width-190,e.clientX-r.left+14)+'px';
+  tt.style.top=(e.clientY-r.top+10)+'px';
+});
+$('mainChart').addEventListener('mouseleave',function(){tt.style.display='none';});
+
+// ---------- anomaly logic (runs every live step) ----------
+function checkFault(){
+  if(!S.fault) return;
+  var f=S.fault;
+  if(f.active&&!f.fixed&&!f.detected&&S.time-f.at>=4){
+    f.detected=true;
+    feed('🚨 <b>ANOMALY:</b> AHU-2 drawing +60% power while Zone B over-cools to '+S.zones[1].Tin.toFixed(1)+'°C — valve stuck open. Est. loss if ignored: <b>₹'+fmt(faultWastePerDay)+'/day</b>. Isolating…','alert');
+    if(aiOn){ f.fixAt=S.time+2; }
+  }
+  if(f.active&&!f.fixed&&f.fixAt&&S.time>=f.fixAt){
+    f.fixed=true;
+    feed('🛠️ <b>AHU-2 isolated</b>, zone re-routed to adjacent AHU, work-order #4712 issued to facility team. Loss contained at <b>₹'+fmt((f.fixAt-f.at)*faultWastePerDay/1440)+'</b>.','alert');
+    $('btnFault').textContent='🚨 Inject fault: AHU-2 valve stuck';
+  }
+}
+
+// ---------- scheduled events ----------
+function checkEvents(){
+  for(var i=0;i<dayEvents.length;i++){
+    var e=dayEvents[i];
+    if(!evFired[i]&&S.time>=e.at){ evFired[i]=true; feed(e.txt,e.cls); }
+  }
+  // dynamic battery-full message
+  if(!dyn.full&&S.soc>=BATT_CAP-1&&S.solarKw>30){ dyn.full=true; feed('🔋 <b>Battery full</b> (150 kWh) — tonight\'s peak is pre-paid with sunlight.','money'); }
+  if(!dyn.peakHit&&isPeak(S.time/60)&&S.battPw>1){ dyn.peakHit=true;
+    feed('⚡ Discharging '+S.battPw.toFixed(0)+' kW — baseline building is buying this exact power at <b>₹13.4/kWh</b>.','money'); }
+}
+var dyn={full:false,peakHit:false};
+
+// ---------- controls ----------
+$('aiSwitch').addEventListener('click',function(){
+  aiOn=!aiOn;
+  this.classList.toggle('on',aiOn);
+  this.querySelector('span').textContent='AI Brain: '+(aiOn?'ON':'OFF');
+  feed(aiOn?'🧠 <b>AI Brain re-engaged</b> — resuming optimization.'
+           : '🧠 <b>AI Brain disabled</b> — building reverts to dumb timer control. Watch the green area stop growing.', aiOn?'money':'alert');
+});
+$('btnPlay').addEventListener('click',function(){
+  playing=!playing; this.textContent=playing?'⏸ Pause':'▶ Play'; this.classList.toggle('primary',playing);
+});
+document.querySelectorAll('.spd').forEach(function(b){
+  b.addEventListener('click',function(){
+    speed=parseInt(this.dataset.s);
+    document.querySelectorAll('.spd').forEach(function(x){x.classList.remove('on');});
+    this.classList.add('on');
+  });
+});
+$('btnNoon').addEventListener('click',function(){ jumpTo(765); });
+$('btnPeak').addEventListener('click',function(){ jumpTo(1050); });
+$('btnFault').addEventListener('click',function(){
+  if(S.fault&&S.fault.active&&!S.fault.fixed){ feed('⚠️ Fault already active in Zone B.','alert'); return; }
+  S.fault={zone:1,active:true,fixed:false,detected:false,at:S.time,fixAt:null};
+  this.textContent='⏳ Fault active — watch the AI…';
+  feed('💣 <b>Fault injected:</b> AHU-2 cooling valve jammed open in Open Office L1.','alert');
+});
+$('btnReset').addEventListener('click',function(){ resetDay(); });
+
+function jumpTo(t){
+  var wasFast=speed; speed=100000;
+  while(S.time<t){ step(S,0.5,aiOn); checkEvents(); checkFault(); }
+  speed=wasFast;
+  recordLive(); render();
+}
+function recordLive(){
+  var t=Math.min(1440,S.time);
+  if(liveT.length && t-liveT[liveT.length-1]<2) return;
+  liveT.push(t); liveG.push(S.gridKw); liveC.push(S.cumCost);
+  if(liveT.length>4000){liveT.shift();liveG.shift();liveC.shift();}
+}
+function resetDay(){
+  S=makeState(); liveT=[];liveG=[];liveC=[]; feedItems=[]; feedSeen=0;
+  evFired={}; dyn={full:false,peakHit:false};
+  $('btnFault').textContent='🚨 Inject fault: AHU-2 valve stuck';
+  feed('🌅 New day — 06:00. Baseline & AI buildings initialized. Press play.');
+  render();
+}
+
+// ---------- main loop ----------
+setInterval(function(){
+  if(!playing) return;
+  acc+=speed*0.1;                       // 100 ms tick
+  while(acc>=0.5){
+    step(S,0.5,aiOn); acc-=0.5;
+    checkEvents(); checkFault();
+    if(S.time>=1440){ playing=false; $('btnPlay').textContent='▶ Play'; $('btnPlay').classList.remove('primary');
+      feed('🌙 24:00 — day complete. Final savings: <b>₹'+fmt(baseDay.costFinal-S.cumCost)+'</b> ('+(100*(1-S.cumCost/baseDay.costFinal)).toFixed(0)+'% cheaper).','money');
+      break; }
+  }
+  recordLive(); render();
+},100);
+
+// ---------- init ----------
+feed('👋 Welcome to <b>UrjaSetu AI</b> — a digital twin of a 90,000 sq ft Mumbai office building.','money');
+feed('🧠 AI Brain ONLINE — forecast loaded, comfort guardrail armed (23–26.5°C), battery at 32%.');
+render();
+})();
+</script>
+</body>
+</html>
+y>
+</html>

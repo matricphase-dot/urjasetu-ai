@@ -1,0 +1,17 @@
+*.log
+*.py[cod]
+.DS_Store
+.env
+.ipynb_checkpoints/
+.pytest_cache/
+.venv/
+.vercel/
+__pycache__/
+api/.python-version
+api/uv.lock
+calibration.json
+deploy/.vercel/
+deploy/api/.python-version
+deploy/api/uv.lock
+node_modules/
+venv/
