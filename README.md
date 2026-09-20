@@ -9,7 +9,7 @@
 `Yuva Yodha Energy Tech Hackathon 2026 · Schneider Electric · Smart Buildings Track`
 
 **🌐 LIVE DEMO:** [urjasetu-ai-eta.vercel.app](https://urjasetu-ai-eta.vercel.app) — live dashboard + working cloud API
-**⚙️ Cloud API:** [`/api/health`](https://urjasetu-ai-eta.vercel.app/api/health) · [`/api/report`](https://urjasetu-ai-eta.vercel.app/api/report) (live savings) · `POST /api/simulate` `{"ai":true,"fault_zone":1}` (fault injection) · `POST /api/optimize` (next control cycle)
+**⚙️ Cloud API:** [`/api/health`](https://urjasetu-ai-eta.vercel.app/api/health) · [`/api/report`](https://urjasetu-ai-eta.vercel.app/api/report) (live savings) · `POST /api/simulate` `{"ai":true,"fault_zone":1}` (fault injection) · `POST /api/optimize` (next control cycle) · [`/api/receipt`](https://urjasetu-ai-eta.vercel.app/api/receipt) (savings receipt)
 
 </div>
 
@@ -46,6 +46,14 @@ autonomously, every 15 minutes:
 > Comfort goes **up**, not down — pre-cooled mornings are more stable than
 > 23°C over-cooling. That's the whole trick: the optimizer is only allowed to
 > save money *inside* the 23–26.5°C comfort band.
+
+
+## What's genuinely new (novelty)
+
+1. **Comfort-constrained TOD arbitrage** — savings are earned *inside* the 23–26.5°C band against Indian Time-of-Day tariffs; comfort ends *up* at 99.8%.
+2. **Rupee-quantified anomalies** — faults become ₹/day figures with auto-isolation and work orders (`urjasetu/anomaly.py`).
+3. **Explainable autonomy** — every zone decision carries a human-readable WHY (tariff / booking / solar), live on the dashboard.
+4. **Twin-first methodology** — one physics engine powers the demo, the test suite and the claims: `pytest -q && python3 -m urjasetu.report`.
 
 ## Quickstart (60 seconds)
 

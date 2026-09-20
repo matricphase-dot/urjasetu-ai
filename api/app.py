@@ -145,3 +145,26 @@ def calibrate(req: CalibrateRequest):
         "projected_saving_rs_per_day_at_tod": round(check - ai.cost_final * check / max(ai.kwh, 1e-9), 0),
         "note": "set_scale() applied to this server process; persist calibration.json in production",
     }
+
+
+@app.get("/api/receipt")
+def receipt():
+    """Shareable 'savings receipt' — twin-verified, print-ready numbers."""
+    b = simulate_day(False, None, 4.0)
+    a = simulate_day(True, None, 4.0)
+    return {
+        "building": "Twin Tower BKC · 90,000 sq ft Mumbai (digital twin)",
+        "projected_full_day": {
+            "energy_kwh": {"baseline": round(b.kwh, 1), "ai": round(a.kwh, 1),
+                           "saving_pct": round(100 * (1 - a.kwh / b.kwh), 1)},
+            "cost_rs": {"baseline": round(b.cost_final), "ai": round(a.cost_final),
+                        "saving_pct": round(100 * (1 - a.cost_final / b.cost_final), 1)},
+            "peak_kw": {"baseline": round(b.peak, 1), "ai": round(a.peak, 1),
+                        "cut_pct": round(100 * (1 - a.peak / b.peak), 1)},
+            "comfort_pct": {"baseline": round(b.comfort_pct, 1), "ai": round(a.comfort_pct, 1)},
+            "co2_avoided_kg_per_day": round(b.co2 - a.co2, 1),
+        },
+        "annualized_saving_rs": round((b.cost_final - a.cost_final) * 312),
+        "badge": "comfort-constrained · audit-grade · twin v1.1",
+        "live_demo": "https://urjasetu-ai-eta.vercel.app",
+    }

@@ -63,6 +63,15 @@
   .switch.on .track::after{left:22px}
   .switch span{font-size:13px;font-weight:600}
   .hint{font-size:11.5px;color:var(--mut);margin-top:9px;line-height:1.5}
+  /* ---------- receipt modal ---------- */
+  .modal{position:fixed;inset:0;background:rgba(4,8,16,.8);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+  .modal.open{display:flex}
+  .receipt{background:#0E1626;border:1.5px dashed #3a4d78;border-radius:14px;padding:22px 26px;width:min(430px,94vw);
+           font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.75;
+           color:var(--txt);box-shadow:0 24px 70px rgba(0,0,0,.65)}
+  .receipt .big{font-size:19px;color:var(--green);font-weight:700}
+  .receipt hr{border:none;border-top:1px dashed #3a4d78;margin:10px 0}
+  .receipt button{margin-top:14px;width:100%}
   /* ---------- zones ---------- */
   .zones{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
   @media(max-width:900px){.zones{grid-template-columns:repeat(2,1fr)}}
@@ -189,11 +198,12 @@
           <button id="btnNoon">🌞 Jump to 12:45</button>
           <button id="btnPeak">⚡ Jump to 17:30</button>
           <button id="btnFault" class="danger">🚨 Inject fault: AHU-2 valve stuck</button>
+          <button id="btnReceipt">🧾 Savings receipt</button>
           <button id="btnReset">↺ Reset day</button>
         </div>
         <div class="hint">
           <b>Demo script:</b> ① Press play, let the AI earn savings → ② hit <b>Jump to 17:30</b> to watch pre-cooling + battery arbitrage beat the evening peak → ③
-          <b>Inject the fault</b> and watch the AI catch a stuck AHU valve in minutes and quarantine it → ④ toggle the <b>AI Brain OFF</b> and watch the gap stop growing.
+          <b>Inject the fault</b> and watch the AI catch a stuck AHU valve in minutes and quarantine it → ④ toggle the <b>AI Brain OFF</b> — the gap stops growing · ⑤ hit <b>🧾 Savings receipt</b> for the shareable proof.
         </div>
       </div>
 
@@ -282,6 +292,7 @@
 <!-- ============================================================
      SIMULATION ENGINE (pure physics — no DOM, deterministic)
      ============================================================ -->
+<div class="modal" id="receiptModal"><div class="receipt" id="receiptCard"></div></div>
 <script id="engine">
 // ---- Tariff: representative Mumbai Time-of-Day commercial tariff (₹/kWh) ----
 var TARIFF=[[0,6.2],[6,8.0],[10,9.2],[18,13.4],[22,6.2],[24,6.2]];
@@ -355,21 +366,21 @@ function makeState(){
 function zonePolicy(z, h, aiOn, state){
   var occ=z.occ;
   if(!aiOn){ // ---------- BASELINE: timer-scheduled, 23°C, zero awareness ----------
-    if(z.type==='server'){ return {set:22, mode:'COOL'}; }
-    if(h>=6 && h<22){ return {set:23, mode:'COOL'}; }   // runs flat-out whether or not people are there
-    return {set:0, mode:'OFF'};
+    if(z.type==='server'){ return {set:22, mode:'COOL', why:'timer · over-cooled 24/7'}; }
+    if(h>=6 && h<22){ return {set:23, mode:'COOL', why:'timer 23°C · blind to people & price'}; }   // runs flat-out whether or not people are there
+    return {set:0, mode:'OFF', why:'timer off'};
   }
   // ---------- URJASETU AI: occupancy + tariff + comfort-constrained ----------
-  if(z.type==='server'){ return {set:24, mode:'COOL'}; } // IT-friendly, still cooler than baseline needs not be 22
+  if(z.type==='server'){ return {set:24, mode:'COOL', why:'IT load 24/7 · right-sized'}; } // IT-friendly, still cooler than baseline needs not be 22
   var ahead=occAhead(z.type,h);
   if(occ>0.06){
-    if(isPeak(h))                 return {set:26,  mode:'COOL'};      // coast through peak
-    if(h>=16.5 && h<18)           return {set:24.5,mode:'PRE-COOL'};  // bank coolth before peak
-    return {set:25.5, mode:'COOL'};                                    // efficient comfort
+    if(isPeak(h))                 return {set:26, mode:'COOL', why:'occupied · coasting ₹13.4 peak'};      // coast through peak
+    if(h>=16.5 && h<18)           return {set:24.5, mode:'PRE-COOL', why:'banking coolth · pre-peak ₹9.2'};  // bank coolth before peak
+    return {set:25.5, mode:'COOL', why:'occupied · ECBC band · solar-first'};                                    // efficient comfort
   }
-  if(ahead>0.30)                  return {set:24.3,mode:'PRE-COOL'};  // meeting in <1 h → pre-cool
-  if(h>=5.5 && h<22.5)            return {set:28.5,mode:'SETBACK'};   // empty → drift
-  return {set:0, mode:'OFF'};                                          // night shutdown
+  if(ahead>0.30)                  return {set:24.3, mode:'PRE-COOL', why:'booking <60 min → pre-cool now'};  // meeting in <1 h → pre-cool
+  if(h>=5.5 && h<22.5)            return {set:28.5, mode:'SETBACK', why:'empty → drift · HVAC ≈ 0'};   // empty → drift
+  return {set:0, mode:'OFF', why:'night shutdown · zero waste'};                                          // night shutdown
 }
 
 // ---- One simulation step (dt in sim-minutes) ----
@@ -380,7 +391,7 @@ function step(s, dt, aiOn){
     z=s.zones[i];
     z.occ=occOf(z.type,h);
     var pol=zonePolicy(z,h,aiOn,s);
-    z.set=pol.set; z.mode=pol.mode;
+    z.set=pol.set; z.mode=pol.mode; z.why=pol.why||'';
     var Tout=tout(h);
     if(pol.mode==='OFF'){
       z.hvac=0;
@@ -488,7 +499,8 @@ var zoneEls=[];
       '<div class="zn">'+z.name+'</div><div class="zf">'+z.floor+'</div>'+
       '<div class="zt"><span id="zT'+i+'">—</span><small>°C</small></div>'+
       '<div class="zo" id="zOcc'+i+'">—</div>'+
-      '<div class="zo" id="zKw'+i+'" style="color:#8CA0B8">—</div>';
+      '<div class="zo" id="zKw'+i+'" style="color:#8CA0B8">—</div>'+
+      '<div class="zo" id="zWhy'+i+'" style="color:#4DA3FF;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>';
     g.appendChild(d);
     zoneEls.push(d);
   });
@@ -559,6 +571,7 @@ function render(){
     var ppl=Math.round(z.occ*z.cap);
     $('zOcc'+i).textContent=z.type==='server' ? 'IT load · 24/7' : (ppl>0?ppl+' people':'empty');
     $('zKw'+i).textContent='HVAC '+z.hvac.toFixed(1)+' kW · set '+ (z.set? z.set.toFixed(1)+'°':'—');
+    $('zWhy'+i).textContent=z.why||'—';
     var chip=$('zChip'+i);
     var label=z.mode, cls=z.mode;
     if(S.fault&&S.fault.zone===i&&S.fault.active&&!S.fault.fixed){label='FAULT';cls='FAULT';zoneEls[i].classList.add('faulty');}
@@ -820,6 +833,35 @@ setInterval(function(){
   }
   recordLive(); render();
 },100);
+
+// ---------- savings receipt ----------
+function openReceipt(){
+  var h=Math.floor(S.time/60), m=Math.floor(S.time%60);
+  var baseNow=baseAtNow(baseDay.cost), aiNow=S.cumCost;
+  var kept=Math.max(0,baseNow-aiNow), pct=baseNow>0?100*kept/baseNow:0;
+  var dK=100*(1-aiDay.kwh/baseDay.kwh), dC=100*(1-aiDay.costFinal/baseDay.costFinal), dP=100*(1-aiDay.peak/baseDay.peak);
+  var hh=(h<10?'0':'')+h+':'+(m<10?'0':'')+m;
+  $('receiptCard').innerHTML=
+   '<div style="text-align:center"><b>⚡ URJASETU AI</b><br><span style="color:#8CA0B8">ENERGY SAVINGS RECEIPT</span></div>'+
+   '<hr>Twin Tower BKC · 90,000 sq ft · Mumbai<br>Sim time <b>'+hh+'</b> · tariff ₹'+tariffAt(h).toFixed(1)+'/kWh'+
+   '<hr><span style="color:#8CA0B8">SO FAR TODAY</span><br>'+
+   'Baseline cost ₹'+fmt(baseNow)+'<br>UrjaSetu cost ₹'+fmt(aiNow)+'<br>'+
+   '<span class="big">KEPT: ₹'+fmt(kept)+' ('+pct.toFixed(0)+'%)</span><br>'+
+   'CO₂ avoided '+fmt(co2Avoided())+' kg'+
+   '<hr><span style="color:#8CA0B8">PROJECTED FULL DAY · twin-verified</span><br>'+
+   'Energy '+fmt(baseDay.kwh)+' → '+fmt(aiDay.kwh)+' kWh (−'+dK.toFixed(0)+'%)<br>'+
+   'Cost ₹'+fmt(baseDay.costFinal)+' → ₹'+fmt(aiDay.costFinal)+' (−'+dC.toFixed(0)+'%)<br>'+
+   'Peak '+baseDay.peak.toFixed(0)+' → '+aiDay.peak.toFixed(0)+' kW (−'+dP.toFixed(0)+'%)<br>'+
+   'Comfort '+baseDay.comfortPct.toFixed(1)+'% → '+aiDay.comfortPct.toFixed(1)+'% ✓<br>'+
+   '<span class="big">₹'+fmt(baseDay.costFinal-aiDay.costFinal)+'/day → ₹'+fmt((baseDay.costFinal-aiDay.costFinal)*312/100000,1)+' Lakh/yr</span>'+
+   '<hr><span style="color:#8CA0B8">comfort-constrained · audit-grade logs<br>live: urjasetu-ai-eta.vercel.app</span>'+
+   '<button id="rcClose">Close</button>';
+  $('receiptModal').classList.add('open');
+  $('rcClose').addEventListener('click',closeReceipt);
+}
+function closeReceipt(){ $('receiptModal').classList.remove('open'); }
+$('btnReceipt').addEventListener('click',openReceipt);
+$('receiptModal').addEventListener('click',function(e){ if(e.target===$('receiptModal')) closeReceipt(); });
 
 // ---------- init ----------
 feed('👋 Welcome to <b>UrjaSetu AI</b> — a digital twin of a 90,000 sq ft Mumbai office building.','money');

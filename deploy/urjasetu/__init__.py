@@ -16,7 +16,7 @@ Submodules:
   report    — CLI savings report
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 from .tariff import tariff_at, is_peak, TARIFF, GRID_CO2      # noqa: F401
 from .weather import tout, solar_kw, cop_at                    # noqa: F401
